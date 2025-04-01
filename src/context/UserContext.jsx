@@ -7,27 +7,25 @@ export const UserContext = createContext();
 const UserProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [errores, setErrores] = useState([]);
+  const [token, setToken] = useState(localStorage.getItem("token") || null);
 
-  //Función para autentificar usuario generando un token
+  // Función para autenticar usuario generando un token
   const auth = async (email, password) => {
     try {
       const URL = "http://localhost:5000/api/auth/login";
       const payload = { email, password };
 
       const user = await axios.post(URL, payload);
-      console.log("user", user);
-      localStorage.setItem("token", user.data.token); //guarda en el almacenamiento local
-
-      console.log("user", user.data);
+      localStorage.setItem("token", user.data.token);
+      setToken(user.data.token);
     } catch (error) {
       console.error(error);
     }
   };
-  //Función para manejar el inicio de sesión
-  const applyLogIn = async (email, password) => {
 
-    //Validar el formulario
-    const validForm = validateLogin( { email, password }, setErrores);
+  // Función para manejar el inicio de sesión
+  const applyLogIn = async (email, password) => {
+    const validForm = validateLogin({ email, password }, setErrores);
 
     if (validForm) {
       await auth(email, password);
@@ -37,54 +35,49 @@ const UserProvider = ({ children }) => {
     }
   };
 
-  //Función para manejar cierre de sesión
+  // Función para manejar cierre de sesión
   const applyLogOut = () => {
     localStorage.removeItem("token");
+    setToken(null);
     setUserData(null);
   };
 
-  //Función para registrarse
+  // Función para registrarse
   const applyRegister = async (email, password) => {
     try {
       const URL = "http://localhost:5000/api/auth/register";
       const payload = { email, password };
 
       const user = await axios.post(URL, payload);
-      console.log("user", user);
-      localStorage.setItem("token", user.data.token); //guarda en el almacenamiento local
-
-      console.log("user", user.data);
+      localStorage.setItem("token", user.data.token);
+      setToken(user.data.token);
     } catch (error) {
       console.error(error);
     }
   };
 
-  //Función para autentificar el perfil del usuario
+  // Función para autenticar el perfil del usuario
   const fetchUser = async () => {
-    const token = localStorage.getItem("token");
+    if (!token) return;
 
-    if (token) {
-      try {
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+    try {
+      const res = await axios.get("http://localhost:5000/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        console.log(res.data);
-        setUserData(res.data);
-      } catch (error) {
-        console.error(error);
-      }
-    } else {
-      setUserData(null);
+      setUserData(res.data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  //Llama la función fetchUser cuando se monta el componente
   useEffect(() => {
-    fetchUser();
-  }, []);
+    if (token) {
+      fetchUser();
+    }
+  }, [token]);
 
   return (
     <UserContext.Provider
@@ -97,7 +90,7 @@ const UserProvider = ({ children }) => {
         applyLogOut,
         applyRegister,
         fetchUser,
-
+        token,
       }}
     >
       {children}
